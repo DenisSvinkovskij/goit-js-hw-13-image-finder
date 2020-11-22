@@ -1,70 +1,74 @@
-import './styles.scss';
+import debounce from 'lodash.debounce';
+import * as basicLightbox from 'basiclightbox';
 
 import imagesCardTpl from './templates/img-card-markup.hbs';
 import PixabayApiServise from './js/APIService';
 
-import debounce from 'lodash.debounce';
+import './styles.scss';
 
 const refs = {
   input: document.querySelector('#search-form input'),
   outputList: document.querySelector('.gallery'),
-  loadMoreBtn: document.querySelector('[data-action="load-more"]'),
+  watcher: document.querySelector('.watcher'),
 };
 
 const pixabayApiServise = new PixabayApiServise();
 
 refs.input.addEventListener('input', debounce(onSearchInputChange, 500));
-refs.loadMoreBtn.addEventListener('click', onClickLoadMoreBtn);
+refs.outputList.addEventListener('click', onClickImage);
 
-function onSearchInputChange(e) {
-  pixabayApiServise.query = e.target.value;
+function onSearchInputChange({ target }) {
+  pixabayApiServise.query = target.value;
   if (pixabayApiServise.query === '') {
-    addClassHidenToLoadMoreBtn();
-    clearArticlesContainer();
+    clearArticlesList();
     return;
   }
 
-  clearArticlesContainer();
+  clearArticlesList();
   pixabayApiServise.resetPage();
   fetchToPixabayApiAndRender();
-  removeClassHidenFromLoadMoreBtn();
 }
 
 function fetchToPixabayApiAndRender() {
-  pixabayApiServise.fetchImages().then(({ hits }) => {
-    appendImagesMarkup(hits);
-  });
+  pixabayApiServise.fetchImages().then(appendImagesMarkup);
 }
 
-function appendImagesMarkup(images) {
-  refs.outputList.insertAdjacentHTML('beforeend', imagesCardTpl(images));
+function appendImagesMarkup({ hits }) {
+  refs.outputList.insertAdjacentHTML('beforeend', imagesCardTpl(hits));
 }
 
-function clearArticlesContainer() {
+function clearArticlesList() {
   refs.outputList.innerHTML = '';
 }
 
-//load-more button settings
+//Modal img settings
 
-async function onClickLoadMoreBtn() {
-  refs.loadMoreBtn.disabled = true;
-
-  await fetchToPixabayApiAndRender();
-
-  refs.loadMoreBtn.disabled = false;
-
-  setTimeout(() => {
-    window.scrollBy({
-      top: window.innerHeight - 50,
-      behavior: 'smooth',
-    });
-  }, 300);
+function onClickImage({ target: { dataset } }) {
+  basicLightbox
+    .create(
+      `<img width="" height="" src="${dataset.sourse}">
+`,
+    )
+    .show();
 }
 
-function addClassHidenToLoadMoreBtn() {
-  refs.loadMoreBtn.classList.add('is-hiden');
-}
+//infinite scroll settings
 
-function removeClassHidenFromLoadMoreBtn() {
-  refs.loadMoreBtn.classList.remove('is-hiden');
-}
+const intersectionCallback = entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting && pixabayApiServise.query !== '') {
+      fetchToPixabayApiAndRender();
+    }
+  });
+};
+
+const intersectionOptions = {
+  rootMargin: '0% 0% 50% 0%',
+};
+
+const observer = new IntersectionObserver(
+  intersectionCallback,
+  intersectionOptions,
+);
+
+observer.observe(refs.watcher);
