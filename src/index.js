@@ -1,8 +1,8 @@
 import debounce from 'lodash.debounce';
-import * as basicLightbox from 'basiclightbox';
 
 import imagesCardTpl from './templates/img-card-markup.hbs';
 import PixabayApiServise from './js/APIService';
+import { onClickImage } from './js/modal-img';
 
 import './styles.scss';
 
@@ -39,17 +39,6 @@ function appendImagesMarkup({ hits }) {
 
 function clearArticlesList() {
   refs.outputList.innerHTML = '';
-}
-
-//Modal img settings
-
-function onClickImage({ target: { dataset } }) {
-  basicLightbox
-    .create(
-      `<img width="" height="" src="${dataset.sourse}">
-`,
-    )
-    .show();
 }
 
 //infinite scroll settings
